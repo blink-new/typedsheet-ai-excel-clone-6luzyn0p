@@ -11,15 +11,20 @@ import {
   Undo,
   Redo,
   Copy,
-  Paste,
-  Cut,
+  Clipboard,
+  Scissors,
   FileText,
   Calculator,
   BarChart3,
-  Palette
+  Palette,
+  Sparkles
 } from 'lucide-react';
 
-export function Ribbon() {
+interface RibbonProps {
+  onAIAssistantToggle: () => void;
+}
+
+export function Ribbon({ onAIAssistantToggle }: RibbonProps) {
   return (
     <div className="bg-white border-b border-gray-200 px-4 py-2">
       <div className="flex items-center gap-4">
@@ -41,13 +46,13 @@ export function Ribbon() {
         {/* Clipboard */}
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <Cut className="h-4 w-4" />
+            <Scissors className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
             <Copy className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <Paste className="h-4 w-4" />
+            <Clipboard className="h-4 w-4" />
           </Button>
         </div>
 
@@ -97,8 +102,13 @@ export function Ribbon() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-8 px-3">
-            <FileText className="h-4 w-4 mr-1" />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            onClick={onAIAssistantToggle}
+          >
+            <Sparkles className="h-4 w-4 mr-1" />
             AI Assistant
           </Button>
         </div>

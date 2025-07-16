@@ -50,17 +50,20 @@ export function validateCellValue(value: string, type: CellDataType): boolean {
 
 export function formatCellValue(value: string, type: CellDataType): string {
   switch (type) {
-    case 'number':
+    case 'number': {
       const num = Number(value);
       return isNaN(num) ? value : num.toLocaleString();
-    case 'date':
+    }
+    case 'date': {
       const date = new Date(value);
       return isNaN(date.getTime()) ? value : date.toLocaleDateString();
-    case 'boolean':
+    }
+    case 'boolean': {
       const lower = value.toLowerCase();
       if (['true', '1', 'yes'].includes(lower)) return 'TRUE';
       if (['false', '0', 'no'].includes(lower)) return 'FALSE';
       return value;
+    }
     default:
       return value;
   }
@@ -68,8 +71,49 @@ export function formatCellValue(value: string, type: CellDataType): string {
 
 export function inferDataType(value: string): CellDataType {
   if (value.startsWith('=')) return 'formula';
-  if (!isNaN(Number(value)) && value.trim() !== '') return 'number';
-  if (!isNaN(Date.parse(value)) && value.includes('/') || value.includes('-')) return 'date';
+  if (!isNaN(Number(value)) && value.trim() !== '' && !isNaN(parseFloat(value))) return 'number';
+  if (!isNaN(Date.parse(value)) && (value.includes('/') || value.includes('-') || value.includes('.'))) return 'date';
   if (['true', 'false', '1', '0', 'yes', 'no'].includes(value.toLowerCase())) return 'boolean';
   return 'text';
+}
+
+export function evaluateFormula(formula: string, data: Record<string, any>): string {
+  try {
+    // Simple formula evaluation for basic operations
+    if (!formula.startsWith('=')) return formula;
+    
+    let expression = formula.substring(1);
+    
+    // Replace cell references with values
+    expression = expression.replace(/[A-Z]+\d+/g, (cellRef) => {
+      const cellData = data[cellRef];
+      return cellData?.value || '0';
+    });
+    
+    // Handle basic functions
+    expression = expression.replace(/SUM\(([^)]+)\)/g, (match, range) => {
+      const values = range.split(',').map((v: string) => parseFloat(v.trim()) || 0);
+      return values.reduce((sum: number, val: number) => sum + val, 0).toString();
+    });
+    
+    expression = expression.replace(/AVERAGE\(([^)]+)\)/g, (match, range) => {
+      const values = range.split(',').map((v: string) => parseFloat(v.trim()) || 0);
+      const sum = values.reduce((sum: number, val: number) => sum + val, 0);
+      return (sum / values.length).toString();
+    });
+    
+    // Basic arithmetic evaluation (simplified)
+    try {
+      // Only allow basic math operations for security
+      if (/^[\d+\-*/().\s]+$/.test(expression)) {
+        return eval(expression).toString();
+      }
+    } catch {
+      return '#ERROR!';
+    }
+    
+    return expression;
+  } catch {
+    return '#ERROR!';
+  }
 }

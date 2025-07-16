@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { CellPosition, SpreadsheetData, CellData, CellDataType } from '../types/spreadsheet';
-import { getCellId, getColumnLabel, formatCellValue, inferDataType, validateCellValue } from '../utils/spreadsheet';
+import { getCellId, getColumnLabel, formatCellValue, inferDataType, validateCellValue, evaluateFormula } from '../utils/spreadsheet';
 import { Badge } from './ui/badge';
 
 interface SpreadsheetGridProps {
@@ -49,10 +49,17 @@ export function SpreadsheetGrid({
     const isValid = validateCellValue(editValue, inferredType);
     
     if (isValid) {
+      let processedValue = editValue;
+      
+      // Evaluate formula if it's a formula
+      if (inferredType === 'formula') {
+        processedValue = evaluateFormula(editValue, data);
+      }
+      
       const cellData: CellData = {
-        value: editValue,
+        value: processedValue,
         type: inferredType,
-        formatted: formatCellValue(editValue, inferredType)
+        formatted: formatCellValue(processedValue, inferredType)
       };
       
       if (inferredType === 'formula') {
@@ -64,7 +71,7 @@ export function SpreadsheetGrid({
     
     setEditingCell(null);
     setEditValue('');
-  }, [editingCell, editValue, onCellChange]);
+  }, [editingCell, editValue, onCellChange, data]);
 
   const handleEditCancel = useCallback(() => {
     setEditingCell(null);
@@ -83,7 +90,7 @@ export function SpreadsheetGrid({
           onCellSelect({ row: newRow, col: selectedCell.col });
         }
         break;
-      case 'Tab':
+      case 'Tab': {
         e.preventDefault();
         if (editingCell) {
           handleEditConfirm();
@@ -91,6 +98,7 @@ export function SpreadsheetGrid({
         const newCol = Math.min(selectedCell.col + 1, COLS - 1);
         onCellSelect({ row: selectedCell.row, col: newCol });
         break;
+      }
       case 'Escape':
         if (editingCell) {
           handleEditCancel();
@@ -144,11 +152,21 @@ export function SpreadsheetGrid({
 
   const getDataTypeColor = (type: CellDataType): string => {
     switch (type) {
-      case 'number': return 'bg-blue-100 text-blue-800';
-      case 'date': return 'bg-green-100 text-green-800';
-      case 'boolean': return 'bg-purple-100 text-purple-800';
-      case 'formula': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'number': {
+        return 'bg-blue-100 text-blue-800';
+      }
+      case 'date': {
+        return 'bg-green-100 text-green-800';
+      }
+      case 'boolean': {
+        return 'bg-purple-100 text-purple-800';
+      }
+      case 'formula': {
+        return 'bg-orange-100 text-orange-800';
+      }
+      default: {
+        return 'bg-gray-100 text-gray-800';
+      }
     }
   };
 
@@ -163,15 +181,32 @@ export function SpreadsheetGrid({
         {/* Column Headers */}
         <div className="sticky top-0 z-20 bg-gray-50 border-b border-gray-300 flex">
           <div className="w-12 h-6 bg-gray-100 border-r border-gray-300" />
-          {Array.from({ length: COLS }, (_, col) => (
-            <div
-              key={col}
-              className="flex items-center justify-center border-r border-gray-300 bg-gray-50 text-xs font-medium text-gray-700"
-              style={{ width: COL_WIDTH, height: ROW_HEIGHT }}
-            >
-              {getColumnLabel(col)}
-            </div>
-          ))}
+          {Array.from({ length: COLS }, (_, col) => {
+            // Determine column type based on data in that column
+            const columnCells = Array.from({ length: ROWS }, (_, row) => {
+              const cellId = getCellId(row, col);
+              return data[cellId];
+            }).filter(Boolean);
+            
+            const columnType = columnCells.length > 0 
+              ? columnCells[0]?.type || 'text'
+              : 'text';
+            
+            const typeColorClass = getDataTypeColor(columnType).split(' ')[0];
+            
+            return (
+              <div
+                key={col}
+                className="flex flex-col items-center justify-center border-r border-gray-300 bg-gray-50 text-xs font-medium text-gray-700 relative group"
+                style={{ width: COL_WIDTH, height: ROW_HEIGHT }}
+              >
+                <span>{getColumnLabel(col)}</span>
+                {columnCells.length > 0 && (
+                  <div className={`absolute -bottom-1 w-full h-1 ${typeColorClass}`} />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Grid Rows */}

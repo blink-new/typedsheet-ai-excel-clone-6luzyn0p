@@ -3,14 +3,30 @@ import { Ribbon } from './components/Ribbon';
 import { FormulaBar } from './components/FormulaBar';
 import { SpreadsheetGrid } from './components/SpreadsheetGrid';
 import { StatusBar } from './components/StatusBar';
+import { AIAssistant } from './components/AIAssistant';
 import { CellPosition, SpreadsheetData, CellData } from './types/spreadsheet';
 import { getCellId } from './utils/spreadsheet';
 
 function App() {
-  const [data, setData] = useState<SpreadsheetData>({});
+  const [data, setData] = useState<SpreadsheetData>({
+    'A1': { value: 'Product', type: 'text', formatted: 'Product' },
+    'B1': { value: 'Price', type: 'text', formatted: 'Price' },
+    'C1': { value: 'Quantity', type: 'text', formatted: 'Quantity' },
+    'D1': { value: 'Total', type: 'text', formatted: 'Total' },
+    'A2': { value: 'Laptop', type: 'text', formatted: 'Laptop' },
+    'B2': { value: '999.99', type: 'number', formatted: '999.99' },
+    'C2': { value: '2', type: 'number', formatted: '2' },
+    'A3': { value: 'Mouse', type: 'text', formatted: 'Mouse' },
+    'B3': { value: '29.99', type: 'number', formatted: '29.99' },
+    'C3': { value: '5', type: 'number', formatted: '5' },
+    'A4': { value: 'Keyboard', type: 'text', formatted: 'Keyboard' },
+    'B4': { value: '79.99', type: 'number', formatted: '79.99' },
+    'C4': { value: '3', type: 'number', formatted: '3' },
+  });
   const [selectedCell, setSelectedCell] = useState<CellPosition>({ row: 0, col: 0 });
   const [formulaValue, setFormulaValue] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
 
   const handleCellChange = useCallback((cellId: string, cellData: CellData) => {
     setData(prev => ({
@@ -52,6 +68,11 @@ function App() {
 
   const selectedCellId = getCellId(selectedCell.row, selectedCell.col);
 
+  const handleAISuggestionApply = useCallback((suggestion: string) => {
+    setFormulaValue(suggestion);
+    setIsEditing(true);
+  }, []);
+
   return (
     <div className="h-screen flex flex-col bg-gray-100">
       {/* Title Bar */}
@@ -66,7 +87,7 @@ function App() {
       </div>
 
       {/* Ribbon */}
-      <Ribbon />
+      <Ribbon onAIAssistantToggle={() => setShowAIAssistant(!showAIAssistant)} />
 
       {/* Formula Bar */}
       <FormulaBar
@@ -89,6 +110,15 @@ function App() {
 
       {/* Status Bar */}
       <StatusBar selectedCell={selectedCell} data={data} />
+
+      {/* AI Assistant */}
+      <AIAssistant
+        isOpen={showAIAssistant}
+        onClose={() => setShowAIAssistant(false)}
+        onSuggestionApply={handleAISuggestionApply}
+        selectedCell={selectedCellId}
+        cellValue={formulaValue}
+      />
     </div>
   );
 }
